@@ -1,0 +1,129 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Showroom {
+  id              String    @id @default(cuid())
+  name            String
+  city            String
+  contactPhone    String
+  contactName     String?
+  commissionRate  Decimal   @db.Decimal(5,2)
+  address         String?
+  notes           String?
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  products        Product[]
+  orders          Order[]
+  commissions     Commission[]
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  image       String?
+  sortOrder   Int       @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  products    Product[]
+}
+
+model Product {
+  id           String    @id @default(cuid())
+  name         String
+  slug         String    @unique
+  description  String?
+  basePrice    BigInt
+  images       String[]  @default([])
+  colors       String[]  @default([])
+  material     String?
+  dimensions   String?
+  fabricType   String?
+  innerFrame   String?
+  seatSponge   String?
+  baseMaterial String?
+  isFeatured   Boolean   @default(false)
+  isActive     Boolean   @default(true)
+  categoryId   String
+  showroomId   String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  category     Category  @relation(fields: [categoryId], references: [id])
+  showroom     Showroom  @relation(fields: [showroomId], references: [id])
+  orders       Order[]
+
+  @@index([categoryId])
+  @@index([showroomId])
+  @@index([isFeatured])
+}
+
+model Order {
+  id               String      @id @default(cuid())
+  customerName     String
+  customerPhone    String
+  customerCity     String
+  customerMessage  String?
+  productId        String
+  showroomId       String
+  product          Product     @relation(fields: [productId], references: [id])
+  showroom         Showroom    @relation(fields: [showroomId], references: [id])
+  agreedPrice      BigInt?
+  commissionRate   Decimal?    @db.Decimal(5,2)
+  commissionAmount BigInt?
+  commissionPaid   Boolean     @default(false)
+  commissionPaidAt DateTime?
+  status           OrderStatus @default(PENDING)
+  adminNotes       String?
+  statusNote       String?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  commission       Commission?
+
+  @@index([status])
+  @@index([showroomId])
+  @@index([createdAt])
+  @@index([commissionPaid])
+}
+
+model Commission {
+  id            String    @id @default(cuid())
+  orderId       String    @unique
+  showroomId    String
+  amount        BigInt
+  rateUsed      Decimal   @db.Decimal(5,2)
+  isPaid        Boolean   @default(false)
+  paidAt        DateTime?
+  paymentMethod String?
+  notes         String?
+  createdAt     DateTime  @default(now())
+  order         Order     @relation(fields: [orderId], references: [id])
+  showroom      Showroom  @relation(fields: [showroomId], references: [id])
+
+  @@index([showroomId])
+  @@index([isPaid])
+}
+
+model Admin {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String
+  createdAt DateTime @default(now())
+
+  @@map("admins")
+}
+
+enum OrderStatus {
+  PENDING
+  CONTACTED
+  NEGOTIATING
+  CONFIRMED
+  DELIVERED
+  CANCELLED
+}
